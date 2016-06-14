@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#myCanvas {
+	margin-top:150px;
+	margin-left:200px;
+}
+img {
+	width:50px;
+	cursor:pointer;
+	
+}
+
+</style>
+</head>
+
+
+<body>
+<h1>GAME</h1>
+<audio id="sound"></audio>
+<canvas id="myCanvas"  width="800" height="290" style="border:1px solid #000000;">
+</canvas>
+
+
+<script >
+var sounds = document.getElementById("sound");
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+var highscore=0;
+var score=0;
+highscore = sessionStorage.getItem('highscore');
+window.addEventListener("keydown",keypressed,true);
+ctx.font="20px Georgia";
+ctx.fillText("Press SPACE or UP arrow to START the Game",100,270);
+function draw_background(){ 
+	ctx.save();
+	ctx.fillStyle = "#85C1E9";
+	ctx.globalAlpha = 0.5;
+	ctx.fillRect(0,0,800,240);
+	ctx.restore();
+}	
+draw_background();
+
+var circle = {
+	x : 50,
+	y : 200,
+	r : 40,
+	color : "red",
+	add : 2,
+};
+
+
+function drawCircle() {
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(circle.x,circle.y,circle.r,0,2*Math.PI);
+	ctx.fillStyle = circle.color;
+	ctx.fill();
+	ctx.lineWidth = 3;
+	ctx.stroke();
+	ctx.restore();
+}
+drawCircle();
+
+var obstacle = {
+	x :600,
+	y :170,
+	width : 40,
+	height : 70,
+	addx : 1,
+};
+
+function drawObstacle(){
+	ctx.save();
+	ctx.fillStyle = "green";
+	ctx.fillRect(obstacle.x,obstacle.y,obstacle.width,obstacle.height);
+	ctx.restore();
+}
+drawObstacle();
+
+
+var id;
+var id2;
+var collide=0;
+function keypressed(e){
+	 
+	//SPACE or UP arrow keydown listener
+	if(e.keyCode == 38 || e.keyCode == 32){
+		window.removeEventListener("keydown",keypressed,true);
+	    sounds.src = "jump.mp3";
+		sounds.play();
+		id = setInterval(jump,8);
+		
+		if(collide == 0){
+			collide = 1;
+			id2 = setInterval(create_obstacle,5);
+		}
+		
+		//restarting the game after collision
+		else if(collide == 2){
+			location.reload();
+		}
+	}
+}
+function jump(){ 
+	if(circle.y > 200){
+		circle.add = 2;
+		clearInterval(id);
+		window.addEventListener("keydown",keypressed,true);
+	}
+	else if(circle.y <= 40){
+		circle.add = -circle.add;
+	}
+	circle.y -= circle.add;
+	reDraw();
+}
+function reDraw(){
+	//clearing the canvas
+	ctx.clearRect(0,0,800,240);
+	
+	//re-drawing whole canvas
+	draw_background();
+	drawCircle();
+	drawObstacle();
+	
+	ctx.save();
+	ctx.font="20px Georgia";
+	ctx.fillStyle = "blue";
+	if(highscore != null){
+		ctx.fillText("High Score : "+highscore,640,270);
+	}
+	ctx.restore();
+	
+}
+
+function create_obstacle(){
+	if(obstacle.x <= -obstacle.width){
+		//generating random width 
+		obstacle.width = (Math.floor(Math.random()*5)+3)*10;
+		
+		//generating random height 
+		obstacle.height = (Math.floor(Math.random()*5)+3)*10;
+		
+		obstacle.y = 240-obstacle.height;
+		obstacle.x = 600;
+		score++;
+		//setting speed based on score
+		if(score<=10)
+			obstacle.addx = 1;
+		else if(score<=20)
+			obstacle.addx = 1.5;
+		else if(score<=40)
+			obstacle.addx = 2;
+		else
+			obstacle.addx = 2.5;
+		
+	}
+	obstacle.x -=obstacle.addx;
+	reDraw();
+	if(checkcollision()){
+		sounds.src = "hit.mp3";
+		sounds.play();
+		//event listening to restart the game
+		window.addEventListener("keydown",keypressed,true);
+		
+		//clearing time intervals to stop the game on collision
+		clearInterval(id);
+		clearInterval(id2);
+		collide = 2;
+		if(score > highscore){
+			highscore = score;
+			sessionStorage.setItem("highscore",highscore);
+		}
+		reDraw();
+	}
+}
+function checkcollision(){
+	
+	var diffx = Math.abs(circle.x -(obstacle.x + obstacle.width/2));
+	var diffy = Math.abs(circle.y -(obstacle.y + obstacle.height/2));
+		
+	if(diffx > (obstacle.width/2 + circle.r)){return false;}
+	if(diffy > (obstacle.height/2 + circle.r)){return false;}
+	if (diffx <= (obstacle.width/2)) { return true; } 
+	if (diffy <= (obstacle.height/2)) { return true; }
+	
+	//Checking collisions near corners (x1-x)2 + (y1-y)2  = r2
+	var corner1= Math.pow(circle.x - obstacle.x,2) + Math.pow(circle.y - obstacle.y,2);
+	if(corner1 < Math.pow(circle.r,2)){return true;}
+	var corner2 = Math.pow(circle.x - (obstacle.x+obstacle.width),2) + Math.pow(circle.y - obstacle.y,2);
+	if(corner2 < Math.pow(circle.r,2)){return true;}
+ 
+}
+</script>
+
+
+</body>
+</html>
+
